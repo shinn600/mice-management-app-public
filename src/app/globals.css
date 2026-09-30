@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --sidebar-bg: #1e293b;
+  --sidebar-text: #e2e8f0;
+  --sidebar-hover: #334155;
+  --sidebar-active: #4f46e5;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* 印刷共通設定（個体一覧・個体詳細のタグ印刷で共有）
+ *
+ * アプリシェル（layout.tsx の flex + min-h-screen）を印刷レイアウトから切り離すことが要点。
+ * これを行わないと Chrome for Android で余剰な空白ページが出る：
+ *   - `min-height: 100vh` が印刷時に残ると、Android では vh が端末の画面ビューポート高基準で
+ *     解決されるため用紙1ページ分より高くなり、中身のない余剰ページが生成される
+ *   - 改ページ（break-after: page）対象が flex コンテナの子孫にあると、Chromium の
+ *     flex 内フラグメンテーションが不完全なため、Android の印刷経路で空ページだけが出る
+ * シェルの display:flex / min-height の解除は layout.tsx の print: ユーティリティで行い、
+ * ここでは html/body と共通の非表示要素を扱う。
+ */
+@media print {
+  @page {
+    size: A4;
+    margin: 10mm 5mm;
+  }
+
+  * {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    overflow: visible !important;
+  }
+
+  html,
+  body {
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  /* サイドバー（PC・モバイルドロワーとも <aside>）、ヘッダー、ハンバーガーボタン
+     （モバイル用オーバーレイは Sidebar.tsx 側で print:hidden を付与） */
+  header,
+  aside,
+  button[aria-label="Open menu"] {
+    display: none !important;
+  }
+}

@@ -1,0 +1,259 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Strain {
+  id                Int      @id @default(autoincrement())
+  name              String   @unique
+  geneticBackground String
+  modificationType  String?
+  description       String?
+  color             String   @default("#4F46E5")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  mice       Mouse[]
+  substrains Substrain[]
+  allowedUsers UserStrain[]
+  owners     StrainOwner[]
+}
+
+model Substrain {
+  id        Int      @id @default(autoincrement())
+  number    Int
+  color     String   @default("#4F46E5")
+  strainId  Int
+  strain    Strain   @relation(fields: [strainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mice Mouse[]
+
+  @@unique([strainId, number])
+}
+
+model Mouse {
+  id                   Int      @id @default(autoincrement())
+  mouseCode            String   @unique
+  sex                  String
+  birthDate            DateTime?
+  strainId             Int
+  strain               Strain   @relation(fields: [strainId], references: [id])
+  fatherId             Int?
+  father               Mouse?   @relation("FatherChildren", fields: [fatherId], references: [id])
+  motherId             Int?
+  mother               Mouse?   @relation("MotherChildren", fields: [motherId], references: [id])
+  childrenAsFather     Mouse[]  @relation("FatherChildren")
+  childrenAsMother     Mouse[]  @relation("MotherChildren")
+  status               String   @default("alive")
+  identificationMethod String?
+  identificationDetail String?
+  identificationNote   String?
+  cageId               Int?
+  cage                 Cage?      @relation(fields: [cageId], references: [id])
+  substrainId          Int?
+  substrain            Substrain? @relation(fields: [substrainId], references: [id])
+  note                 String?
+  litterId             Int?
+  litter               Litter?  @relation(fields: [litterId], references: [id])
+  createdBy            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  genotypingRecords   GenotypingRecord[]
+  complianceUsages    ComplianceUsage[]
+  matingPairsAsMale   MatingPair[]       @relation("MalePairs")
+  matingPairsAsFemale MatingPair[]       @relation("FemalePairs")
+}
+
+model GenotypingRecord {
+  id            Int       @id @default(autoincrement())
+  mouseId       Int
+  mouse         Mouse     @relation(fields: [mouseId], references: [id], onDelete: Cascade)
+  targetGene    String
+  pcrResult     String
+  genotypeLabel String
+  testedDate    DateTime?
+  note          String?
+  createdBy     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model MatingPair {
+  id        Int       @id @default(autoincrement())
+  maleId    Int
+  male      Mouse     @relation("MalePairs", fields: [maleId], references: [id])
+  femaleId  Int
+  female    Mouse     @relation("FemalePairs", fields: [femaleId], references: [id])
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+  cageId    Int?
+  cage      Cage?     @relation(fields: [cageId], references: [id])
+  note      String?
+  createdBy String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  plugChecks PlugCheck[]
+  litters    Litter[]
+}
+
+model PlugCheck {
+  id                  Int        @id @default(autoincrement())
+  matingPairId        Int
+  matingPair          MatingPair @relation(fields: [matingPairId], references: [id], onDelete: Cascade)
+  checkDate           DateTime
+  plugFound           Boolean
+  note                String?
+  createdBy           String?
+  createdAt           DateTime   @default(now())
+  birthReminderSentAt DateTime?
+}
+
+model Litter {
+  id                 Int        @id @default(autoincrement())
+  matingPairId       Int
+  matingPair         MatingPair @relation(fields: [matingPairId], references: [id])
+  birthDate          DateTime
+  pupCount           Int
+  weaningDate        DateTime?
+  note               String?
+  createdBy          String?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  weanReminderSentAt DateTime?
+
+  mice Mouse[]
+}
+
+model Cage {
+  id          Int      @id @default(autoincrement())
+  cageCode    String   @unique
+  maxCapacity Int      @default(5)
+  rackId      Int?
+  rack        Rack?    @relation(fields: [rackId], references: [id])
+  shelfNumber String?
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  mice        Mouse[]
+  matingPairs MatingPair[]
+}
+
+model Rack {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  location  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cages Cage[]
+}
+
+model ExperimentApproval {
+  id             Int       @id @default(autoincrement())
+  approvalNumber String    @unique
+  title          String
+  allowedCount   Int
+  startDate      DateTime?
+  endDate        DateTime?
+  note           String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  usages ComplianceUsage[]
+}
+
+model ComplianceUsage {
+  id                   Int                @id @default(autoincrement())
+  experimentApprovalId Int
+  experimentApproval   ExperimentApproval @relation(fields: [experimentApprovalId], references: [id])
+  mouseId              Int
+  mouse                Mouse              @relation(fields: [mouseId], references: [id])
+  usageDate            DateTime
+  purpose              String?
+  note                 String?
+  createdAt            DateTime           @default(now())
+
+  @@unique([experimentApprovalId, mouseId])
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  name      String?
+  email     String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boardPosts    BoardPost[]
+  boardComments BoardComment[]
+  allowedStrains UserStrain[]
+  ownedStrains  StrainOwner[]
+}
+
+model UserStrain {
+  id       Int    @id @default(autoincrement())
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strainId Int
+  strain   Strain @relation(fields: [strainId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, strainId])
+}
+
+// Strain "person in charge" — a display-only reference to who manages a strain day to day.
+// Deliberately independent of UserStrain (view/operate access control): being listed as an
+// owner does not grant or require any access permission on the strain.
+model StrainOwner {
+  id       Int    @id @default(autoincrement())
+  strainId Int
+  strain   Strain @relation(fields: [strainId], references: [id], onDelete: Cascade)
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([strainId, userId])
+}
+
+model BoardPost {
+  id        Int      @id @default(autoincrement())
+  title     String
+  body      String
+  category  String   @default("request")
+  priority  String   @default("medium")
+  status    String   @default("open")
+  pinned    Boolean  @default(false)
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments BoardComment[]
+}
+
+model BoardComment {
+  id           Int       @id @default(autoincrement())
+  postId       Int
+  post         BoardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  body         String
+  authorId     Int
+  author       User      @relation(fields: [authorId], references: [id])
+  statusChange String?
+  createdAt    DateTime  @default(now())
+}
